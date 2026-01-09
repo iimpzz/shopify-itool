@@ -1,0 +1,210 @@
+<div class="collection-page--container">
+    <h2>Comparison of LED Headlight Bulbs Series</h2>
+    <style>
+      .auxito-table-container {
+        border: 4px solid #fecb00;
+        border-radius: 15px;
+        overflow: hidden; /* keep rounded corners */
+        display: block;
+        width: 100%;
+        max-width: 100%;
+        background-color: #000;
+        font-family: Arial, sans-serif;
+        box-sizing: border-box;
+      }
+    
+      /* Scroll wrapper: only this area can scroll horizontally (if needed) */
+      .auxito-table-scroll {
+        width: 100%;
+        max-width: 100%;
+        overflow-x: auto;
+        overflow-y: hidden;
+        -webkit-overflow-scrolling: touch;
+        overscroll-behavior-x: contain;
+        box-sizing: border-box;
+      }
+    
+      .auxito-comparison-table {
+        border-collapse: separate !important; /* prevent theme overriding to collapse */
+        border-spacing: 5px;
+        background-color: #000;
+        width: 100%;
+        min-width: 600px; /* desktop: keep columns readable */
+        border: none;
+        margin: 0;
+        box-sizing: border-box;
+      }
+    
+      .auxito-comparison-table th,
+      .auxito-comparison-table td {
+        background-color: #fff;
+        padding: 12px 15px;
+        text-align: center;
+        font-size: 14px;
+        font-weight: bold;
+        color: #333;
+        border: none;
+        border-radius: 4px;
+        vertical-align: middle;
+      }
+    
+      .auxito-comparison-table th {
+        background-color: #fecb00;
+        color: #000;
+        text-transform: uppercase;
+        font-weight: 800;
+        padding: 8px 15px;
+      }
+    
+      /* First column wrapper */
+      .series-wrapper {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        height: 100%;
+        min-width: 0;
+        flex-wrap: nowrap;
+      }
+    
+      /* Add border separator for the first column instead of spacer col */
+      .auxito-comparison-table td:first-child,
+      .auxito-comparison-table th:first-child {
+        border-right: 3px solid #000;
+      }
+    
+      .auxito-comparison-table td:first-child {
+        min-width: 120px;
+        position: relative;
+        box-shadow: inset -10px 0 10px -10px rgba(0, 0, 0, 0.1);
+      }
+    
+      .auxito-product-img {
+        width: 50px;
+        height: 50px;
+        object-fit: contain;
+        display: block;
+      }
+    
+      .auxito-product-name {
+        font-weight: 900;
+        color: #c5862b;
+        font-size: 14px;
+        white-space: nowrap;
+      }
+    
+      /* Mobile: keep spacing, but make table fit screen (no page horizontal drag) */
+      @media (max-width: 768px) {
+        .auxito-table-scroll {
+          overflow-x: hidden;
+        }
+    
+        .auxito-comparison-table {
+          min-width: 100%;
+          width: 100%;
+          table-layout: fixed;
+          border-spacing: 3px;
+        }
+    
+        .auxito-product-name {
+          font-size: 12px;
+        }
+    
+        .auxito-comparison-table th,
+        .auxito-comparison-table td {
+          padding: 6px 6px;
+          font-size: 12px;
+          overflow-wrap: normal;
+          word-break: normal;
+          font-weight: 500;
+        }
+    
+        .auxito-comparison-table th {
+          word-break: break-word;
+        }
+    
+        .auxito-comparison-table th:first-child,
+        .auxito-comparison-table td:first-child { 
+          width: 28%;
+          box-sizing: border-box;
+        }
+    
+        .auxito-comparison-table td {
+          white-space: normal;
+          overflow-wrap: break-word;
+          word-break: normal; 
+          hyphens: auto;
+        }
+    
+        .auxito-comparison-table td:first-child {
+          overflow-wrap: normal;
+          word-break: normal;
+        }
+    
+        .auxito-product-img {
+          width: 40px;
+          height: 40px;
+        }
+    
+        .series-wrapper {
+          flex-direction: row;
+          flex-wrap: nowrap;
+          gap: 6px;
+          justify-content: flex-start;
+          min-width: 0;
+        }
+    
+        .auxito-product-name {
+          white-space: normal;
+          flex: 1 1 auto;
+          min-width: 0;
+          line-height: 1.15;
+          overflow-wrap: break-word;
+        }
+      }
+    
+      @media (max-width: 480px) {
+        .auxito-comparison-table {
+          border-spacing: 2px;
+        }
+        .auxito-comparison-table th,
+        .auxito-comparison-table td {
+          padding: 6px 6px;
+          font-size: 11px;
+        }
+      }
+    </style>
+    
+    <div class="auxito-table-container">
+      <div class="auxito-table-scroll">
+          <table class="auxito-comparison-table">
+              <thead>
+                  <tr>
+                  <th>SERIES</th>
+                  <th>LUMEN/PAIR</th>
+                  <th>POWER/PAIR</th>
+                  <th>COLOR OPTION</th>
+                  <th>WATERPROOF</th>
+              </tr>
+          </thead>
+          <tbody>
+            <!-- 示例数据：运营粘贴时可删除/替换 -->
+            <tr>
+              <td>
+                <a class="series-wrapper" href="/collections/led-fog-lights/m6">
+                  <img class="auxito-product-img" src="https://auxito.com/cdn/shop/files/auxito-h10-9140-9145-led-fog-lights-6500k-cool-white-600-brighter-mini-size-plug-play-42281674277108_128x128.jpg?v=1726314545">
+                  <span class="auxito-product-name">M6</span>
+                </a>
+              </td>
+              <td>9000LM</td>
+              <td>40W</td>
+              <td>6500 White<br/>3000K Amber</td>
+              <td>IP67</td>
+          </tr>
+          </tbody>
+          </table>
+      </div>
+    </div>
+</div>
+
+
