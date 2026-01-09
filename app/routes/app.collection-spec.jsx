@@ -281,6 +281,8 @@ export default function CollectionSpecGenerator() {
     },
   ]);
   const [copied, setCopied] = useState(false);
+  // 每行的折叠状态（默认全部展开）
+  const [rowsCollapsed, setRowsCollapsed] = useState({});
 
   // 数据列数量 = headers.length - 1（第一列是 SERIES）
   const dataColCount = headers.length - 1;
@@ -307,6 +309,11 @@ export default function CollectionSpecGenerator() {
 
   const addRow = () => setRows((prev) => [...prev, createNewRow(dataColCount)]);
   const removeRow = (idx) => setRows((prev) => prev.filter((_, i) => i !== idx));
+
+  // 切换行的折叠状态
+  const toggleRowCollapse = (idx) => {
+    setRowsCollapsed((prev) => ({ ...prev, [idx]: !prev[idx] }));
+  };
 
   // 添加一列（表头 + 所有行都要加）
   const addColumn = () => {
@@ -448,28 +455,56 @@ export default function CollectionSpecGenerator() {
             </div>
 
             <div style={{ display: "flex", flexDirection: "column", gap: 12 }}>
-              {rows.map((r, idx) => (
-                <div
-                  key={idx}
-                  style={{
-                    border: "1px solid #e4e7ec",
-                    borderRadius: 10,
-                    padding: 12,
-                    background: "#fff",
-                  }}
-                >
-                  <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
-                    <div style={{ fontWeight: 700 }}>第 {idx + 1} 行</div>
-                    <s-button
-                      onClick={() => removeRow(idx)}
-                      variant="secondary"
-                      {...(rows.length <= 1 ? { disabled: true } : {})}
-                    >
-                      删除
-                    </s-button>
-                  </div>
+              {rows.map((r, idx) => {
+                const isCollapsed = rowsCollapsed[idx] || false;
+                return (
+                  <div
+                    key={idx}
+                    style={{
+                      border: "1px solid #e4e7ec",
+                      borderRadius: 10,
+                      padding: 12,
+                      background: "#fff",
+                    }}
+                  >
+                    <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", gap: 8 }}>
+                      <button
+                        onClick={() => toggleRowCollapse(idx)}
+                        style={{
+                          display: "flex",
+                          alignItems: "center",
+                          gap: 6,
+                          background: "transparent",
+                          border: "none",
+                          cursor: "pointer",
+                          padding: 0,
+                          fontWeight: 700,
+                          fontSize: 14,
+                        }}
+                      >
+                        <span
+                          style={{
+                            display: "inline-block",
+                            transition: "transform 0.2s",
+                            transform: isCollapsed ? "rotate(0deg)" : "rotate(90deg)",
+                            fontSize: 10,
+                          }}
+                        >
+                          ▶
+                        </span>
+                        第 {idx + 1} 行
+                      </button>
+                      <s-button
+                        onClick={() => removeRow(idx)}
+                        variant="secondary"
+                        {...(rows.length <= 1 ? { disabled: true } : {})}
+                      >
+                        删除
+                      </s-button>
+                    </div>
 
-                  <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
+                    {!isCollapsed && (
+                      <div style={{ marginTop: 10, display: "flex", flexDirection: "column", gap: 8 }}>
                     {/* 第一列：SERIES（固定：名称 + 链接 + 图片）*/}
                     <div
                       style={{
@@ -554,8 +589,10 @@ export default function CollectionSpecGenerator() {
                       提示：在单元格内换行会自动转成 &lt;br/&gt;
                     </div>
                   </div>
+                    )}
                 </div>
-              ))}
+                );
+              })}
             </div>
 
             <div style={{ display: "flex", gap: 8, flexWrap: "wrap" }}>
@@ -586,25 +623,29 @@ export default function CollectionSpecGenerator() {
           </div>
         </s-section>
 
-        {/* Right: Preview */}
-        <s-section heading="实时预览">
-          <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-            <div style={{ color: "#667085", fontSize: 12 }}>
-              预览用 iframe 隔离了样式（避免影响 Shopify 后台样式）。你粘贴到 collection 页时会以模板样式显示。
+        {/* Right: Preview（sticky 固定跟随滚动）*/}
+        <div style={{ position: "sticky", top: 16, alignSelf: "start" }}>
+          <s-section heading="实时预览">
+            <div style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <div style={{ color: "#667085", fontSize: 12 }}>
+                预览用 iframe 隔离了样式（避免影响 Shopify 后台样式）。你粘贴到 collection 页时会以模板样式显示。
+              </div>
+              <iframe
+                title="spec-preview"
+                srcDoc={previewSrcDoc}
+                style={{
+                  width: "100%",
+                  height: "calc(100vh - 200px)",
+                  minHeight: 500,
+                  maxHeight: 800,
+                  border: "1px solid #e4e7ec",
+                  borderRadius: 10,
+                  background: "#fff",
+                }}
+              />
             </div>
-            <iframe
-              title="spec-preview"
-              srcDoc={previewSrcDoc}
-              style={{
-                width: "100%",
-                height: 620,
-                border: "1px solid #e4e7ec",
-                borderRadius: 10,
-                background: "#fff",
-              }}
-            />
-          </div>
-        </s-section>
+          </s-section>
+        </div>
       </div>
     </s-page>
   );
