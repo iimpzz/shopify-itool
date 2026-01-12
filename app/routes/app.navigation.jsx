@@ -54,10 +54,14 @@ export const action = async ({ request }) => {
 };
 
 // 导航项编辑组件
-function NavigationItemEditor({ item, onUpdate, onDelete, level = 0 }) {
+// 使用模块级变量存储拖拽信息，避免 dataTransfer 的限制
+let dragState = null;
+
+function NavigationItemEditor({ item, onUpdate, onDelete, onMoveUp, onMoveDown, canMoveUp, canMoveDown, onDragStart, onDragOver, onDrop, isDragging, level = 0, index = 0 }) {
   const [isExpanded, setIsExpanded] = useState(true);
   const [isEditing, setIsEditing] = useState(false);
   const [editData, setEditData] = useState(item);
+  const [dragOver, setDragOver] = useState(false);
 
   const hasChildren = item.children && item.children.length > 0;
 
@@ -87,35 +91,195 @@ function NavigationItemEditor({ item, onUpdate, onDelete, level = 0 }) {
     onUpdate(updated);
   };
 
-  const handleUpdateChild = (index, updatedChild) => {
+  const handleUpdateChild = (childIndex, updatedChild) => {
     const updated = {
       ...editData,
-      children: editData.children.map((child, i) =>
-        i === index ? updatedChild : child
+      children: (editData.children || []).map((child, i) =>
+        i === childIndex ? updatedChild : child
       ),
     };
     setEditData(updated);
     onUpdate(updated);
   };
 
-  const handleDeleteChild = (index) => {
+  const handleDeleteChild = (childIndex) => {
     const updated = {
       ...editData,
-      children: editData.children.filter((_, i) => i !== index),
+      children: editData.children.filter((_, i) => i !== childIndex),
     };
     setEditData(updated);
     onUpdate(updated);
   };
 
+  const handleMoveChildUp = (childIndex) => {
+    if (childIndex === 0) return;
+    const children = [...(editData.children || [])];
+    [children[childIndex - 1], children[childIndex]] = [children[childIndex], children[childIndex - 1]];
+    const updated = { ...editData, children };
+    setEditData(updated);
+    onUpdate(updated);
+  };
+
+  const handleMoveChildDown = (childIndex) => {
+    if (childIndex >= (editData.children || []).length - 1) return;
+    const children = [...(editData.children || [])];
+    [children[childIndex], children[childIndex + 1]] = [children[childIndex + 1], children[childIndex]];
+    const updated = { ...editData, children };
+    setEditData(updated);
+    onUpdate(updated);
+  };
+
+  const handleDragStart = (e) => {
+    if (isEditing) {
+      e.preventDefault();
+      return;
+    }
+    // 阻止事件冒泡，避免父元素的拖拽事件覆盖子元素的拖拽状态
+    e.stopPropagation();
+    e.dataTransfer.effectAllowed = "move";
+    // 同时使用 dataTransfer 和全局变量存储拖拽信息
+    e.dataTransfer.setData("text/plain", index.toString());
+    e.dataTransfer.setData("level", level.toString());
+    // 使用全局变量存储，确保在 drop 时能读取到
+    dragState = { index, level };
+    console.log("拖拽开始:", { index, level, itemTitle: item.title || item.handle, dragState });
+    if (onDragStart) {
+      onDragStart(index);
+    }
+  };
+
+  const handleDragOver = (e) => {
+    if (isEditing) return;
+    e.preventDefault();
+    // 不阻止冒泡，让父元素也能处理拖拽悬停
+    e.dataTransfer.dropEffect = "move";
+    if (onDragOver) {
+      onDragOver(index);
+    }
+    setDragOver(true);
+  };
+
+  const handleDragLeave = (e) => {
+    if (isEditing) return;
+    // 只有当离开整个元素时才清除拖拽状态
+    if (!e.currentTarget.contains(e.relatedTarget)) {
+      setDragOver(false);
+    }
+  };
+
+  const handleDrop = (e) => {
+    if (isEditing) return;
+    e.preventDefault();
+    e.stopPropagation();
+    setDragOver(false);
+    
+    // 优先使用全局变量，如果不存在则尝试从 dataTransfer 读取
+    let draggedIndex, draggedLevel;
+    
+    if (dragState) {
+      draggedIndex = dragState.index;
+      draggedLevel = dragState.level;
+      console.log("使用全局 dragState:", dragState);
+    } else {
+      // 回退到 dataTransfer
+      const draggedIndexStr = e.dataTransfer.getData("text/plain");
+      const draggedLevelStr = e.dataTransfer.getData("level");
+      
+      if (!draggedIndexStr || draggedIndexStr === "" || !draggedLevelStr || draggedLevelStr === "") {
+        console.log("✗ 无法获取拖拽数据");
+        if (onDragStart) {
+          onDragStart(null);
+        }
+        return;
+      }
+      
+      draggedIndex = parseInt(draggedIndexStr, 10);
+      draggedLevel = parseInt(draggedLevelStr, 10);
+      
+      if (isNaN(draggedIndex) || isNaN(draggedLevel)) {
+        console.log("✗ 拖拽数据解析失败");
+        if (onDragStart) {
+          onDragStart(null);
+        }
+        return;
+      }
+    }
+    
+    // 只允许同级别的拖拽
+    console.log("拖拽放置检查:", { 
+      hasOnDrop: !!onDrop, 
+      draggedIndex, 
+      index, 
+      draggedLevel, 
+      level,
+      sameIndex: draggedIndex === index,
+      sameLevel: draggedLevel === level,
+      itemTitle: item.title || item.handle
+    });
+    
+    if (onDrop && draggedIndex !== index && draggedLevel === level) {
+      console.log("✓ 调用 onDrop:", { draggedIndex, index, draggedLevel, level });
+      try {
+        onDrop(draggedIndex, index);
+        console.log("✓ onDrop 执行成功");
+      } catch (error) {
+        console.error("✗ onDrop 执行错误:", error);
+      }
+    } else {
+      console.log("✗ 拖拽条件不满足:", { 
+        hasOnDrop: !!onDrop, 
+        draggedIndex, 
+        index, 
+        draggedLevel, 
+        level,
+        sameIndex: draggedIndex === index,
+        sameLevel: draggedLevel === level,
+        condition: draggedIndex !== index && draggedLevel === level
+      });
+    }
+    
+    // 清除拖拽状态
+    dragState = null;
+    if (onDragStart) {
+      onDragStart(null);
+    }
+  };
+
+  const handleDragEnd = () => {
+    setDragOver(false);
+    // 清除全局拖拽状态
+    dragState = null;
+    if (onDragStart) {
+      onDragStart(null); // 清除拖拽状态
+    }
+  };
+
   return (
     <div
+      draggable={!isEditing}
+      onDragStart={handleDragStart}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+      onDragEnd={handleDragEnd}
       style={{
         marginLeft: `${level * 20}px`,
         marginBottom: "8px",
-        border: "1px solid #e1e3e5",
+        border: dragOver ? "2px solid #008060" : isDragging ? "2px dashed #6d7175" : "1px solid #e1e3e5",
         borderRadius: "4px",
         padding: "12px",
-        backgroundColor: level === 0 ? "#f6f6f7" : "#ffffff",
+        backgroundColor: dragOver ? "#e8f5e9" : (isDragging ? "#f5f5f5" : (level === 0 ? "#f6f6f7" : "#ffffff")),
+        cursor: isEditing ? "default" : "grab",
+        opacity: isDragging ? 0.5 : 1,
+        transition: "all 0.2s ease",
+        userSelect: "none",
+        position: "relative",
+      }}
+      onClick={(e) => {
+        // 防止拖拽时触发点击事件
+        if (e.detail > 1) {
+          e.preventDefault();
+        }
       }}
     >
       {isEditing ? (
@@ -548,7 +712,11 @@ function NavigationItemEditor({ item, onUpdate, onDelete, level = 0 }) {
           >
             {hasChildren && (
               <button
-                onClick={() => setIsExpanded(!isExpanded)}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  setIsExpanded(!isExpanded);
+                }}
+                onMouseDown={(e) => e.stopPropagation()}
                 style={{
                   padding: "4px 8px",
                   border: "none",
@@ -558,6 +726,23 @@ function NavigationItemEditor({ item, onUpdate, onDelete, level = 0 }) {
               >
                 {isExpanded ? "▼" : "▶"}
               </button>
+            )}
+            {!isEditing && (
+              <span
+                style={{
+                  marginRight: "8px",
+                  fontSize: "18px",
+                  color: "#6d7175",
+                  cursor: "grab",
+                  userSelect: "none",
+                  display: "inline-block",
+                  lineHeight: "1",
+                }}
+                title="拖拽此处排序（或使用 ↑↓ 按钮）"
+                onMouseDown={(e) => e.stopPropagation()}
+              >
+                ⋮⋮
+              </span>
             )}
             <span style={{ fontWeight: "bold", flex: 1 }}>
               {item.title || "未命名"}
@@ -584,6 +769,49 @@ function NavigationItemEditor({ item, onUpdate, onDelete, level = 0 }) {
             >
               {item.type}
             </span>
+            {/* 排序按钮 */}
+            <div style={{ display: "flex", gap: "4px", marginRight: "4px" }}>
+              {onMoveUp && (
+                <button
+                  onClick={onMoveUp}
+                  disabled={!canMoveUp}
+                  title="上移"
+                  style={{
+                    padding: "4px 8px",
+                    backgroundColor: canMoveUp ? "#008060" : "#e1e3e5",
+                    color: canMoveUp ? "white" : "#999",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: canMoveUp ? "pointer" : "not-allowed",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    minWidth: "32px",
+                  }}
+                >
+                  ↑
+                </button>
+              )}
+              {onMoveDown && (
+                <button
+                  onClick={onMoveDown}
+                  disabled={!canMoveDown}
+                  title="下移"
+                  style={{
+                    padding: "4px 8px",
+                    backgroundColor: canMoveDown ? "#008060" : "#e1e3e5",
+                    color: canMoveDown ? "white" : "#999",
+                    border: "none",
+                    borderRadius: "4px",
+                    cursor: canMoveDown ? "pointer" : "not-allowed",
+                    fontSize: "14px",
+                    fontWeight: "bold",
+                    minWidth: "32px",
+                  }}
+                >
+                  ↓
+                </button>
+              )}
+            </div>
             <button
               onClick={() => setIsEditing(true)}
               style={{
@@ -660,13 +888,47 @@ function NavigationItemEditor({ item, onUpdate, onDelete, level = 0 }) {
       )}
 
       {hasChildren && isExpanded && (
-        <div style={{ marginTop: "12px" }}>
-          {editData.children.map((child, index) => (
+        <div 
+          style={{ marginTop: "12px" }}
+          onDragOver={(e) => {
+            // 允许在子菜单容器上拖拽，但不阻止子元素的拖拽事件
+            e.preventDefault();
+            // 不调用 stopPropagation，让事件继续传播到子元素
+          }}
+        >
+          {(editData.children || []).map((child, childIndex) => (
             <NavigationItemEditor
-              key={index}
+              key={childIndex}
               item={child}
-              onUpdate={(updated) => handleUpdateChild(index, updated)}
-              onDelete={() => handleDeleteChild(index)}
+              index={childIndex}
+              onUpdate={(updated) => handleUpdateChild(childIndex, updated)}
+              onDelete={() => handleDeleteChild(childIndex)}
+              onMoveUp={childIndex > 0 ? () => handleMoveChildUp(childIndex) : null}
+              onMoveDown={childIndex < (editData.children || []).length - 1 ? () => handleMoveChildDown(childIndex) : null}
+              canMoveUp={childIndex > 0}
+              canMoveDown={childIndex < (editData.children || []).length - 1}
+              onDragStart={(idx) => {
+                // 子菜单拖拽开始，可以在这里添加状态管理
+              }}
+              onDragOver={(idx) => {
+                // 子菜单拖拽悬停，可以在这里添加视觉反馈
+              }}
+              onDrop={(fromIdx, toIdx) => {
+                // 子菜单拖拽放置处理
+                console.log("子菜单拖拽:", { fromIdx, toIdx, children: editData.children?.length });
+                if (fromIdx !== null && toIdx !== null && fromIdx !== toIdx && !isNaN(fromIdx) && !isNaN(toIdx)) {
+                  const children = [...(editData.children || [])];
+                  if (fromIdx >= 0 && fromIdx < children.length && toIdx >= 0 && toIdx <= children.length) {
+                    const [moved] = children.splice(fromIdx, 1);
+                    children.splice(toIdx, 0, moved);
+                    const updated = { ...editData, children };
+                    setEditData(updated);
+                    onUpdate(updated);
+                    console.log("子菜单拖拽完成:", { newOrder: children.map(c => c.title || c.handle) });
+                  }
+                }
+              }}
+              isDragging={false}
               level={level + 1}
             />
           ))}
@@ -701,23 +963,41 @@ export default function NavigationConfig() {
     loaderData?.config?.navigationData || { links: [] }
   );
   const [isSaving, setIsSaving] = useState(false);
+  const [hasUnsavedChanges, setHasUnsavedChanges] = useState(false);
+  const [initialData, setInitialData] = useState(
+    loaderData?.config?.navigationData || { links: [] }
+  );
+  const [draggedIndex, setDraggedIndex] = useState(null);
 
   useEffect(() => {
     if (loaderData?.config?.navigationData) {
-      setNavigationData(loaderData.config.navigationData);
+      const data = loaderData.config.navigationData;
+      setNavigationData(data);
+      setInitialData(data);
+      setHasUnsavedChanges(false);
     }
   }, [loaderData]);
+
+  // 检测是否有未保存的更改
+  useEffect(() => {
+    const currentJson = JSON.stringify(navigationData, null, 2);
+    const initialJson = JSON.stringify(initialData, null, 2);
+    setHasUnsavedChanges(currentJson !== initialJson);
+  }, [navigationData, initialData]);
 
   useEffect(() => {
     if (fetcher.data?.success) {
       shopify.toast.show("导航配置已保存成功！");
       setIsSaving(false);
+      // 更新初始数据，清除未保存标记
+      setInitialData(navigationData);
+      setHasUnsavedChanges(false);
     }
     if (fetcher.data?.error) {
       shopify.toast.show("保存失败: " + fetcher.data.error, { isError: true });
       setIsSaving(false);
     }
-  }, [fetcher.data, shopify]);
+  }, [fetcher.data, shopify, navigationData]);
 
   const handleAddItem = () => {
     const newItem = {
@@ -736,7 +1016,7 @@ export default function NavigationConfig() {
   const handleUpdateItem = (index, updatedItem) => {
     const updated = {
       ...navigationData,
-      links: navigationData.links.map((item, i) =>
+      links: (navigationData.links || []).map((item, i) =>
         i === index ? updatedItem : item
       ),
     };
@@ -751,6 +1031,46 @@ export default function NavigationConfig() {
       };
       setNavigationData(updated);
     }
+  };
+
+  const handleMoveItemUp = (index) => {
+    if (index === 0) return;
+    const links = [...navigationData.links];
+    [links[index - 1], links[index]] = [links[index], links[index - 1]];
+    setNavigationData({ ...navigationData, links });
+    // 排序操作会触发未保存更改检测
+  };
+
+  const handleMoveItemDown = (index) => {
+    if (index >= navigationData.links.length - 1) return;
+    const links = [...navigationData.links];
+    [links[index], links[index + 1]] = [links[index + 1], links[index]];
+    setNavigationData({ ...navigationData, links });
+    // 排序操作会触发未保存更改检测
+  };
+
+  const handleDragStart = (index) => {
+    if (index !== null) {
+      setDraggedIndex(index);
+    } else {
+      setDraggedIndex(null);
+    }
+  };
+
+  const handleDragOver = (index) => {
+    // 可以在这里添加视觉反馈，但主要反馈在组件内部处理
+  };
+
+  const handleDrop = (fromIndex, toIndex) => {
+    if (fromIndex === null || toIndex === null || fromIndex === toIndex) {
+      setDraggedIndex(null);
+      return;
+    }
+    const links = [...navigationData.links];
+    const [moved] = links.splice(fromIndex, 1);
+    links.splice(toIndex, 0, moved);
+    setNavigationData({ ...navigationData, links });
+    setDraggedIndex(null);
   };
 
   const handleSave = () => {
@@ -869,7 +1189,7 @@ export default function NavigationConfig() {
 
       <s-section heading="导航菜单项">
         <s-stack direction="block" gap="base">
-          <div style={{ marginBottom: "16px" }}>
+          <div style={{ marginBottom: "16px", display: "flex", alignItems: "center", gap: "12px", flexWrap: "wrap" }}>
             <button
               onClick={handleAddItem}
               style={{
@@ -879,35 +1199,75 @@ export default function NavigationConfig() {
                 border: "none",
                 borderRadius: "4px",
                 cursor: "pointer",
-                marginRight: "8px",
               }}
             >
               + 添加菜单项
             </button>
             <button
               onClick={handleSave}
-              disabled={isSaving}
+              disabled={isSaving || !hasUnsavedChanges}
               style={{
                 padding: "8px 16px",
-                backgroundColor: isSaving ? "#6d7175" : "#008060",
+                backgroundColor: isSaving || !hasUnsavedChanges ? "#6d7175" : "#008060",
                 color: "white",
                 border: "none",
                 borderRadius: "4px",
-                cursor: isSaving ? "not-allowed" : "pointer",
+                cursor: isSaving || !hasUnsavedChanges ? "not-allowed" : "pointer",
+                fontWeight: hasUnsavedChanges ? "bold" : "normal",
+                position: "relative",
               }}
             >
-              {isSaving ? "保存中..." : "💾 保存配置"}
+              {isSaving ? "保存中..." : hasUnsavedChanges ? "💾 保存配置（有未保存更改）" : "💾 保存配置"}
             </button>
+            {hasUnsavedChanges && (
+              <span
+                style={{
+                  padding: "4px 12px",
+                  backgroundColor: "#fff4e6",
+                  color: "#b98900",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  fontWeight: "bold",
+                  border: "1px solid #ffd89b",
+                }}
+              >
+                ⚠️ 有未保存的更改
+              </span>
+            )}
+            {!hasUnsavedChanges && !isSaving && (
+              <span
+                style={{
+                  padding: "4px 12px",
+                  backgroundColor: "#e8f5e9",
+                  color: "#2e7d32",
+                  borderRadius: "4px",
+                  fontSize: "12px",
+                  fontWeight: "bold",
+                  border: "1px solid #a5d6a7",
+                }}
+              >
+                ✅ 已保存
+              </span>
+            )}
           </div>
 
           {navigationData.links && navigationData.links.length > 0 ? (
             <div>
-              {navigationData.links.map((item, index) => (
+              {(navigationData.links || []).map((item, index) => (
                 <NavigationItemEditor
                   key={index}
                   item={item}
+                  index={index}
                   onUpdate={(updated) => handleUpdateItem(index, updated)}
                   onDelete={() => handleDeleteItem(index)}
+                  onMoveUp={index > 0 ? () => handleMoveItemUp(index) : null}
+                  onMoveDown={index < navigationData.links.length - 1 ? () => handleMoveItemDown(index) : null}
+                  canMoveUp={index > 0}
+                  canMoveDown={index < navigationData.links.length - 1}
+                  onDragStart={handleDragStart}
+                  onDragOver={handleDragOver}
+                  onDrop={handleDrop}
+                  isDragging={draggedIndex === index}
                   level={0}
                 />
               ))}
@@ -958,7 +1318,7 @@ export default function NavigationConfig() {
               <s-paragraph>
                 <s-text as="strong">所有字段：</s-text>
                 <s-text tone="subdued">
-                  {loaderData.config.allFields.map(f => `${f.key} (${f.type})`).join(", ")}
+                  {(loaderData.config.allFields || []).map(f => `${f.key} (${f.type})`).join(", ")}
                 </s-text>
               </s-paragraph>
             )}
@@ -975,6 +1335,16 @@ export default function NavigationConfig() {
           <s-list-item>可以设置标题、URL、类型等属性</s-list-item>
           <s-list-item>支持添加徽章（Badge）显示</s-list-item>
           <s-list-item>可以添加子菜单项</s-list-item>
+        </s-unordered-list>
+
+        <s-paragraph style={{ marginTop: "16px" }}>
+          <s-text as="strong">排序功能</s-text>
+        </s-paragraph>
+        <s-unordered-list>
+          <s-list-item>使用 ↑ 和 ↓ 按钮调整菜单项顺序</s-list-item>
+          <s-list-item>支持对主菜单和子菜单进行排序</s-list-item>
+          <s-list-item>第一个项目不能上移，最后一个项目不能下移</s-list-item>
+          <s-list-item>排序后记得点击"保存配置"按钮</s-list-item>
         </s-unordered-list>
 
         <s-paragraph style={{ marginTop: "16px" }}>
