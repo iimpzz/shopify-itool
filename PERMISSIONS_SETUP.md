@@ -64,3 +64,4 @@ SCOPES=read_products,write_products,read_metaobjects,write_metaobjects
 - 如果应用已安装到多个商店，每个商店都需要重新授权
 - 权限更改可能需要几分钟才能完全生效
 
+
