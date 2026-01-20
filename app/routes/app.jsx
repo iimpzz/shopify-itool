@@ -17,6 +17,7 @@ export default function App() {
     <AppProvider embedded apiKey={apiKey}>
       <s-app-nav>
         <s-link href="/app">商品导出</s-link>
+        <s-link href="/app/blog-export">博客导出</s-link>
         <s-link href="/app/collection-spec">collection 规格快速生成</s-link>
         <s-link href="/app/navigation">导航配置</s-link>
       </s-app-nav>
