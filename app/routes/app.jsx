@@ -18,15 +18,15 @@ export default function App() {
       <s-app-nav>
         <s-link href="/app">商品导出</s-link>
         <s-link href="/app/blog-export">博客导出</s-link>
-        <s-link href="/app/collection-spec">collection 规格快速生成</s-link>
+        <s-link href="/app/collection-spec">Collection 规格</s-link>
         <s-link href="/app/navigation">导航配置</s-link>
+        <s-link href="/app/vehicle-images">Vehicle 页面配置</s-link>
       </s-app-nav>
       <Outlet />
     </AppProvider>
   );
 }
 
-// Shopify needs React Router to catch some thrown responses, so that their headers are included in the response.
 export function ErrorBoundary() {
   return boundary.error(useRouteError());
 }
