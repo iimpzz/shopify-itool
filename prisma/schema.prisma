@@ -32,3 +32,64 @@ model Session {
   refreshToken        String?
   refreshTokenExpires DateTime?
 }
+
+model VehicleLibraryImportJob {
+  id             String                   @id @default(cuid())
+  shop           String
+  mode           String
+  version        String
+  status         String                   @default("uploaded")
+  originalFileName String?
+  sourceFileSize Int?
+  artifactCount  Int                      @default(0)
+  totalBytes     Int                      @default(0)
+  batchCount     Int                      @default(0)
+  summaryJson    String?
+  errorJson      String?
+  createdAt      DateTime                 @default(now())
+  updatedAt      DateTime                 @updatedAt
+  publishedAt    DateTime?
+  artifacts      VehicleLibraryArtifact[]
+  versions       VehicleLibraryVersion[]
+
+  @@index([shop, createdAt])
+  @@index([shop, version])
+  @@index([status])
+}
+
+model VehicleLibraryArtifact {
+  id            String                  @id @default(cuid())
+  jobId         String
+  type          String
+  fileName      String
+  byteSize      Int
+  checksum      String
+  shopifyFileId String?
+  cdnUrl        String?
+  status        String                  @default("generated")
+  createdAt     DateTime                @default(now())
+  updatedAt     DateTime                @updatedAt
+  job           VehicleLibraryImportJob @relation(fields: [jobId], references: [id], onDelete: Cascade)
+
+  @@index([jobId])
+  @@index([fileName])
+  @@index([status])
+}
+
+model VehicleLibraryVersion {
+  id            String                   @id @default(cuid())
+  shop          String
+  version       String
+  jobId         String?
+  status        String                   @default("published")
+  artifactCount Int                      @default(0)
+  totalBytes    Int                      @default(0)
+  summaryJson   String?
+  publishedAt   DateTime                 @default(now())
+  createdAt     DateTime                 @default(now())
+  job           VehicleLibraryImportJob? @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  @@unique([shop, version])
+  @@index([shop, publishedAt])
+  @@index([status])
+}

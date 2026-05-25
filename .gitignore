@@ -8,10 +8,13 @@ node_modules
 /app/public/build
 /prisma/dev.sqlite
 /prisma/dev.sqlite-journal
+/dev.sqlite
 database.sqlite
 
 .env
 .env.*
+.codex/
+/闲鱼兼职/
 
 
 

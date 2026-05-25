@@ -18,6 +18,7 @@ export default function App() {
       <s-app-nav>
         <s-link href="/app">商品导出</s-link>
         <s-link href="/app/collection-spec">collection 规格快速生成</s-link>
+        <s-link href="/app/vehicle-library">车型库管理</s-link>
       </s-app-nav>
       <Outlet />
     </AppProvider>
